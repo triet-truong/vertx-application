@@ -2,6 +2,7 @@ package starter;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
+import java.util.function.Supplier;
 
 public class MainVerticle extends AbstractVerticle {
 
@@ -9,7 +10,7 @@ public class MainVerticle extends AbstractVerticle {
   public void start() {
     vertx.createHttpServer().requestHandler(req -> req.response().end("Hello Vert.x!")).listen(8080);
 
-    cacheFirst("key", Future.future(h -> {
+    cacheFirst("key", () -> Future.future(h -> {
       System.out.println("Call external API");
       h.complete("Call external API");
     }))
@@ -17,7 +18,7 @@ public class MainVerticle extends AbstractVerticle {
     .onFailure(t -> System.out.println("Failed"));
   }
 
-  private Future<String> cacheFirst(String key, Future<String> task) {
+  private Future<String> cacheFirst(String key, Supplier<Future<String>> task) {
     Future<String> getCache = Future.future(h -> {
       h.complete("ABCXYZ");
     });
@@ -25,7 +26,7 @@ public class MainVerticle extends AbstractVerticle {
     return getCache.onSuccess(res -> {
       System.out.println("Data from cache: " + res);
     }).onFailure(t -> {
-      task.onSuccess(res -> {
+      task.get().onSuccess(res -> {
         System.out.println("Store task result to cache");
       }).onFailure(tt -> {
         System.out.println("Do nothing");
